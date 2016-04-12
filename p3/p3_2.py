@@ -19,15 +19,29 @@ def read_data(filename='hw3mmsb/hw3train.data'):
 
 def lld(theta, beta, adj_mtx):
     num_nodes = adj_mtx.shape[0]
-    lld_res = 0
-    for i in xrange(num_nodes):
-        for j in xrange(num_nodes):
-            if i == j:
-                continue
-            y_ij = adj_mtx[i, j]
-            temp = beta if y_ij else (1 - beta)
-            temp = np.dot(np.dot(theta[i], temp), theta[j])
-            lld_res += np.log(temp)
+
+    neg_beta = 1 - beta
+
+    def ld_local(i, j):
+        y_ij = adj_mtx[i, j]
+        temp = beta if y_ij else neg_beta
+        temp = np.dot(np.dot(theta[i], temp), theta[j])
+        return temp
+
+    ld_locals = np.array([[ld_local(i, j) for i in xrange(num_nodes)] for j in xrange(num_nodes)])
+    ld_locals = np.log(ld_locals)
+    ld_locals = ld_locals - np.diag(np.diag(ld_locals))
+    lld_res = ld_locals.sum().sum()
+
+    # lld_res = 0
+    # for i in xrange(num_nodes):
+    #     for j in xrange(num_nodes):
+    #         if i == j:
+    #             continue
+    #         y_ij = adj_mtx[i, j]
+    #         temp = beta if y_ij else (1 - beta)
+    #         temp = np.dot(np.dot(theta[i], temp), theta[j])
+    #         lld_res += np.log(temp)
     return lld_res
 
 
