@@ -114,6 +114,8 @@ def gibbs_mmsb(adj_mtx):
         lld_t = lld(theta, beta, adj_mtx)
         lld_list.append(lld_t)
         logging.info('Iter:' + str(iter) + ' lld:' + str(lld_t))
+        if iter % 100 == 0:
+            np.save('lld_list', lld_list)
 
 
 def main():
@@ -124,5 +126,6 @@ def main():
 if __name__ == '__main__':
     logging.basicConfig(
         level=logging.DEBUG,
-        format='%(asctime)-15s %(name)-5s %(levelname)-8s %(message)s')
+        format='%(asctime)-15s %(name)-5s %(levelname)-8s %(message)s',
+        filename='p3.log')
     main()
