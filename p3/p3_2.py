@@ -140,7 +140,9 @@ def gibbs_mmsb(adj_mtx):
         lld_list.append(lld_t)
         logging.info('Iter:' + str(iter) + ' lld:' + str(lld_t))
         if iter % 100 == 0:
+            np.savez('output', {'lld_list': lld_list, 'z': z_pairs, 'beta': beta})
             np.save('lld_list', lld_list)
+            np.save('beta', beta)
 
 
 def main():
