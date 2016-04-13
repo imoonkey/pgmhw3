@@ -2,6 +2,7 @@ __author__ = 'moonkey'
 
 import numpy as np
 import logging
+import matplotlib.pyplot as plt
 
 
 def read_data(filename='hw3mmsb/hw3train.data'):
@@ -53,12 +54,13 @@ def between_com_count(z_pairs, K):
     return n_pq
 
 
-def gibbs_mmsb(adj_mtx):
+def gibbs_mmsb(adj_mtx, max_iter=10000, use=1000):
     K = 5
     alpha = 0.02
     eta = [0.01, 0.05]
 
     lld_list = []
+    beta_list = []
     num_nodes = adj_mtx.shape[0]
 
     # z(i,j) ~(Dis(\theta_i), Dis(\theta_j))
@@ -88,7 +90,7 @@ def gibbs_mmsb(adj_mtx):
     # assert (n_pq == n_pq_pos + n_pq_neg).all()
 
     # all_pairs = [(i, j) for i in range(0, num_nodes) for j in range(0, num_nodes) if i != j]
-    for iter in range(10000):
+    for iter in range(max_iter):
         # for (i, j) in all_pairs:
         for i in xrange(num_nodes):
             for j in xrange(num_nodes):
@@ -127,18 +129,29 @@ def gibbs_mmsb(adj_mtx):
         row_sums = theta.sum(axis=1)
         theta = theta / row_sums[:, np.newaxis]
         beta = (n_pq_sign[:, :, 1] + eta[1]) / (n_pq + eta[0] + eta[1])
+        beta_list.append(beta)
+        beta_list = beta_list[:use]
         lld_t = lld(theta, beta, adj_mtx)
         lld_list.append(lld_t)
+        lld_list = lld_list[:use]
         logging.info('Iter:' + str(iter) + ' lld:' + str(lld_t))
         if iter % 1000 == 0:
-            np.savez('output', {'lld_list': lld_list, 'z': z_pairs, 'beta': beta})
-            np.save('lld_list', lld_list)
-            np.save('beta', beta)
+            np.savez('output', lld_list=lld_list, z=z_pairs, beta_list=beta_list)
+    np.savez('output', lld_list=lld_list, z=z_pairs, beta_list=beta_list)
+
+
+def plot_res():
+    output = np.load('output.npz')
+    beta_list = output['beta_list']
+    lld_list = output['lld_list']
+    plt.plot(lld_list)
+    plt.show()
 
 
 def main():
     adj_mtx = read_data()
     gibbs_mmsb(adj_mtx)
+    plot_res()
 
 
 if __name__ == '__main__':
