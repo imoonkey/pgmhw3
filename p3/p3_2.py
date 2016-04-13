@@ -35,13 +35,13 @@ def lld(theta, beta, adj_mtx):
 
     # lld_res = 0
     # for i in xrange(num_nodes):
-    #     for j in xrange(num_nodes):
-    #         if i == j:
-    #             continue
-    #         y_ij = adj_mtx[i, j]
-    #         temp = beta if y_ij else (1 - beta)
-    #         temp = np.dot(np.dot(theta[i], temp), theta[j])
-    #         lld_res += np.log(temp)
+    # for j in xrange(num_nodes):
+    # if i == j:
+    # continue
+    # y_ij = adj_mtx[i, j]
+    # temp = beta if y_ij else (1 - beta)
+    # temp = np.dot(np.dot(theta[i], temp), theta[j])
+    # lld_res += np.log(temp)
     return lld_res
 
 
@@ -80,6 +80,10 @@ def gibbs_mmsb(adj_mtx):
     np.fill_diagonal(z_pairs[:, :, 1], -1)
     n_pq = between_com_count(z_pairs, K)
     pos_link_z_pairs = adj_mtx[:, :, np.newaxis] * z_pairs - (1 - adj_mtx)[:, :, np.newaxis]
+    assert (np.diag(pos_link_z_pairs[:, :, 0]) == -1).all()
+    assert (np.diag(pos_link_z_pairs[:, :, 1]) == -1).all()
+    np.fill_diagonal(pos_link_z_pairs[:, :, 0], -1)
+    np.fill_diagonal(pos_link_z_pairs[:, :, 1], -1)
     n_pq_pos = between_com_count(pos_link_z_pairs, K)
     n_pq_neg = n_pq - n_pq_pos
     n_pq_sign = np.concatenate([n_pq_neg[:, :, np.newaxis], n_pq_pos[:, :, np.newaxis]], axis=2)
@@ -87,20 +91,26 @@ def gibbs_mmsb(adj_mtx):
     # n_pq_neg = between_com_count(neg_link_z_pairs, K)
     # assert (n_pq == n_pq_pos + n_pq_neg).all()
 
+    # all_pairs = [(i, j) for i in range(0, num_nodes) for j in range(0, num_nodes) if i != j]
     for iter in range(10000):
-        for i in range(0, num_nodes):
-            for j in range(0, num_nodes):
+        # for (i, j) in all_pairs:
+        for i in xrange(num_nodes):
+            for j in xrange(num_nodes):
                 # sample z_ij
                 if i == j:
                     continue
+                # assert (n_pq == n_pq_sign[:, :, 0] + n_pq_sign[:, :, 1]).all()
+                # assert (m_ip.sum(axis=1) == 198).all()
+                # assert (n_pq_sign >= 0).all()
                 y_ij = adj_mtx[i, j]
-
+                z_ij = z_pairs[i, j]
                 # subtract link ij, i.e. z_ij from n_pq and m_ip
-                n_pq[z_pairs[i, j]] -= 1
-                n_pq_sign[list(z_pairs[i, j]).append(y_ij)] -= 1
-                m_ip[i, z_pairs[i, j][0]] -= 1
-                m_ip[j, z_pairs[i, j][1]] -= 1
+                n_pq[z_ij[0], z_ij[1]] -= 1
+                n_pq_sign[z_ij[0], z_ij[1], y_ij] -= 1
+                m_ip[i, z_ij[0]] -= 1
+                m_ip[j, z_ij[1]] -= 1
 
+                # assert (n_pq == n_pq_sign[:, :, 0] + n_pq_sign[:, :, 1]).all()
                 # cal prob
                 n_mtx = (n_pq_sign[:, :, y_ij] + eta[y_ij]) / (n_pq + eta[0] + eta[1])
                 left = np.diag(m_ip[i, :] + alpha)
@@ -108,18 +118,19 @@ def gibbs_mmsb(adj_mtx):
                 prob_table = np.dot(np.dot(left, n_mtx), right)
                 prob_table /= prob_table.sum()
 
+                # assert (n_pq == n_pq_sign[:, :, 0] + n_pq_sign[:, :, 1]).all()
                 # sample
-                choices = K * K
+                choices = K ** 2
                 index = np.random.choice(choices, size=1, p=prob_table.ravel())
                 new_k = np.unravel_index(index, dims=[K, K])
 
+                # assert (n_pq == n_pq_sign[:, :, 0] + n_pq_sign[:, :, 1]).all()
                 # add z_ij back with the newly sampled z_ij
                 z_pairs[i, j] = new_k
-                n_pq[z_pairs[i, j]] += 1
-                n_pq_sign[list(z_pairs[i, j]).append(y_ij)] += 1
-                m_ip[i, z_pairs[i, j][0]] += 1
-                m_ip[j, z_pairs[i, j][1]] += 1
-
+                n_pq[new_k[0], new_k[1]] += 1
+                n_pq_sign[new_k[0], new_k[1], y_ij] += 1
+                m_ip[i, new_k[0]] += 1
+                m_ip[j, new_k[1]] += 1
         # estimate \theta and \beta, and compute lld
         theta = m_ip + alpha
         row_sums = theta.sum(axis=1)
@@ -141,5 +152,7 @@ if __name__ == '__main__':
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)-15s %(name)-5s %(levelname)-8s %(message)s',
-        filename='p3.log')
+        # filename='p3.log'
+    )
     main()
+    # profile.run('main()')
