@@ -130,10 +130,10 @@ def gibbs_mmsb(adj_mtx, max_iter=10000, use=1000):
         theta = theta / row_sums[:, np.newaxis]
         beta = (n_pq_sign[:, :, 1] + eta[1]) / (n_pq + eta[0] + eta[1])
         beta_list.append(beta)
-        beta_list = beta_list[:use]
+        beta_list = beta_list[-use:]
         lld_t = lld(theta, beta, adj_mtx)
         lld_list.append(lld_t)
-        lld_list = lld_list[:use]
+        lld_list = lld_list
         logging.info('Iter:' + str(iter) + ' lld:' + str(lld_t))
         if iter % 1000 == 0:
             np.savez('output', lld_list=lld_list, z=z_pairs, beta_list=beta_list)
